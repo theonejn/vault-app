@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A local-first encrypted vault web app." />
+  <title>Password Manager</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Password Manager</h1>
+        <p class="subtitle">Local-first encrypted vault app shell</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary" type="button" disabled>Settings</button>
+        <button class="btn btn-primary" type="button" disabled>Lock</button>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <aside class="sidebar">
+        <div class="panel">
+          <h2>Navigation</h2>
+          <nav>
+            <ul class="nav-list">
+              <li><a href="#" class="nav-link active">Welcome</a></li>
+              <li><a href="#" class="nav-link">All Items</a></li>
+              <li><a href="#" class="nav-link">Favorites</a></li>
+              <li><a href="#" class="nav-link">Passwords</a></li>
+              <li><a href="#" class="nav-link">Secure Notes</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="panel">
+          <h2>Folders</h2>
+          <ul class="folder-list">
+            <li>Personal</li>
+            <li>Work</li>
+            <li>Finance</li>
+          </ul>
+          <button class="btn btn-secondary btn-block" type="button" disabled>Create Folder</button>
+        </div>
+      </aside>
+
+      <section class="content-area">
+        <div class="panel hero-panel">
+          <span class="badge">Milestone 1</span>
+          <h2>App shell is ready</h2>
+          <p>
+            This placeholder confirms your GitHub Pages deployment, file structure,
+            stylesheet loading, and JavaScript wiring are working.
+          </p>
+          <div class="hero-actions">
+            <button id="createVaultBtn" class="btn btn-primary" type="button">Create New Vault</button>
+            <button id="openVaultBtn" class="btn btn-secondary" type="button">Open Existing Vault</button>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <article class="panel card">
+            <h3>What Milestone 1 includes</h3>
+            <ul>
+              <li>Hosted app shell</li>
+              <li>Responsive layout</li>
+              <li>Placeholder navigation</li>
+              <li>Basic button wiring</li>
+            </ul>
+          </article>
+
+          <article class="panel card">
+            <h3>Next planned milestone</h3>
+            <p>
+              Build the interactive UI screens for welcome, unlock, vault home,
+              item details, generator, and settings.
+            </p>
+          </article>
+
+          <article class="panel card">
+            <h3>Security direction</h3>
+            <p>
+              Encryption and decryption will happen locally in the browser using
+              the Web Crypto API in later milestones.
+            </p>
+          </article>
+        </div>
+
+        <div class="panel status-panel">
+          <h3>Status Console</h3>
+          <p id="statusMessage">App shell loaded successfully.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
