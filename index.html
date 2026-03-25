@@ -850,7 +850,12 @@ function showApp() {
   updateCounts(); renderFolders(); renderItems();
   resetAutoLockTimer();
   if (IS_ELECTRON) initSavePath(); else updateSaveBanner();
-  if (IS_MOBILE()) initMobileTabs();
+  // Always init mobile tabs when app shows
+  if (IS_MOBILE()) {
+    const tabs = document.getElementById('mobile-tabs');
+    if (tabs) tabs.style.display = 'flex';
+    initMobileTabs();
+  }
   document.getElementById('unlock-pw').value = '';
   document.getElementById('import-pw').value = '';
 }
@@ -1679,8 +1684,9 @@ function setMobileTab(tab) {
 
 function initMobileTabs() {
   if (!IS_MOBILE()) return;
-  document.getElementById('mobile-tabs').style.display = 'flex';
-  setMobileTab('items');
+  const tabs = document.getElementById('mobile-tabs');
+  if (tabs) tabs.style.display = 'flex';
+  setMobileTab(currentMobileTab || 'items');
 }
 
 // When an item is selected on mobile, auto-switch to preview tab
@@ -1735,6 +1741,13 @@ window.addEventListener('load',()=>{
     document.getElementById('lock-hint').innerHTML='First time here? Select your .vault backup file<br>from iCloud Drive and enter your master password.';
   }
   autoLockMins=parseInt(localStorage.getItem(AUTOLOCK_KEY)||'0')||0;
+  // Pre-init mobile tabs so panels display correctly after unlock
+  if (IS_MOBILE()) {
+    const tabs = document.getElementById('mobile-tabs');
+    if (tabs) tabs.style.display = 'flex';
+    const btn = document.getElementById('mtab-items');
+    if (btn) btn.classList.add('active');
+  }
 });
 </script>
 </body>
