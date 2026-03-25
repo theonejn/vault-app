@@ -374,6 +374,48 @@ body { -webkit-text-size-adjust: 100%; }
   .header-center { order: 3; width: 100%; }
   .lock-wrap { width: 92vw; }
 }
+
+/* ── MOBILE BOTTOM TABS ── */
+.mobile-tabs {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mobile-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; padding: 10px 4px 8px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+  color: var(--text-faint); cursor: pointer; border: none;
+  background: transparent; transition: color .15s;
+}
+.mobile-tab.active { color: var(--accent); }
+.mobile-tab-icon { font-size: 20px; }
+
+@media (max-width: 700px) {
+  .save-banner { display: none !important; }
+  .mobile-tabs { display: flex !important; }
+  .app-body { padding-bottom: 62px; overflow: hidden; }
+  .app-header { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+  .header-center { order: 3; width: 100%; }
+  .app-logo { font-size: 16px; letter-spacing: 4px; }
+  .hbtn { font-size: 10px; padding: 6px 10px; }
+  .lock-wrap { width: 92vw; }
+  .form-grid { grid-template-columns: 1fr; }
+  .pv-grid   { grid-template-columns: 1fr; }
+
+  /* Only show active panel */
+  .sidebar, .items-col, .preview-pane { display: none !important; }
+  .sidebar.mobile-active    { display: flex !important; flex-direction: column; width: 100%; border-right: none; overflow-y: auto; }
+  .items-col.mobile-active  { display: flex !important; width: 100%; border-right: none; }
+  .preview-pane.mobile-active { display: flex !important; }
+  .items-toolbar { gap: 6px; }
+}
+@media (min-width: 701px) {
+  .sidebar, .items-col, .preview-pane { display: flex !important; }
+}
 /* Hidden inputs */
 #import-input,#csv-import-input,#attach-file-input{display:none}
 
@@ -808,6 +850,7 @@ function showApp() {
   updateCounts(); renderFolders(); renderItems();
   resetAutoLockTimer();
   if (IS_ELECTRON) initSavePath(); else updateSaveBanner();
+  if (IS_MOBILE()) initMobileTabs();
   document.getElementById('unlock-pw').value = '';
   document.getElementById('import-pw').value = '';
 }
@@ -1612,6 +1655,62 @@ function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
 }
+
+
+// ═══════════════════════════════════════════
+//  MOBILE TAB NAVIGATION
+// ═══════════════════════════════════════════
+let currentMobileTab = 'items';
+const IS_MOBILE = () => window.innerWidth <= 700;
+
+function setMobileTab(tab) {
+  currentMobileTab = tab;
+  const sidebar  = document.querySelector('.sidebar');
+  const itemsCol = document.querySelector('.items-col');
+  const preview  = document.querySelector('.preview-pane');
+  if (!IS_MOBILE()) return;
+  sidebar.classList.toggle('mobile-active',  tab === 'nav');
+  itemsCol.classList.toggle('mobile-active', tab === 'items');
+  preview.classList.toggle('mobile-active',  tab === 'preview');
+  document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('mtab-' + tab);
+  if (btn) btn.classList.add('active');
+}
+
+function initMobileTabs() {
+  if (!IS_MOBILE()) return;
+  document.getElementById('mobile-tabs').style.display = 'flex';
+  setMobileTab('items');
+}
+
+// When an item is selected on mobile, auto-switch to preview tab
+const _origSelectItem = selectItem;
+function selectItem(id) {
+  _origSelectItem(id);
+  if (IS_MOBILE()) setMobileTab('preview');
+}
+
+// When add is clicked on mobile, switch to preview (edit pane)
+const _origOpenAddPane = openAddPane;
+function openAddPane(type) {
+  _origOpenAddPane(type);
+  if (IS_MOBILE()) setMobileTab('preview');
+}
+
+window.addEventListener('resize', () => {
+  const tabs = document.getElementById('mobile-tabs');
+  if (!tabs) return;
+  if (IS_MOBILE()) {
+    tabs.style.display = 'flex';
+    setMobileTab(currentMobileTab);
+  } else {
+    tabs.style.display = 'none';
+    // Restore all panels on desktop
+    document.querySelector('.sidebar').classList.remove('mobile-active');
+    document.querySelector('.items-col').classList.remove('mobile-active');
+    document.querySelector('.preview-pane').classList.remove('mobile-active');
+  }
+});
 
 // ═══════════════════════════════════════════
 //  KEYBOARD + EVENT LISTENERS
