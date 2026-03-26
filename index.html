@@ -105,11 +105,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 /* ── ITEMS COLUMN ── */
 .items-col{width:320px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface)}
-.items-toolbar{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);flex-shrink:0}
-.add-pw-btn{flex:1;background:var(--accent);color:#0a0a0b;border:none;border-radius:var(--r);font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;padding:10px 8px;cursor:pointer;transition:opacity .2s}
-.add-pw-btn:active{opacity:.85}
-.add-note-btn{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--r);font-family:var(--sans);font-weight:600;font-size:13px;letter-spacing:1px;padding:10px 8px;cursor:pointer;transition:all .2s}
-.add-note-btn:active{border-color:var(--blue-dim);color:var(--blue)}
+/* Rail add button + floating menu */
+.sb-add-btn{font-size:22px;color:var(--accent);font-weight:300;font-family:var(--sans)}
+.sb-add-btn:active,.sb-add-btn:hover{background:var(--accent-bg2)}
+.rail-add-menu{
+  display:none;position:fixed;left:62px;
+  background:#1c1c22 !important;border:2px solid #8aac2a;
+  border-radius:12px;min-width:200px;z-index:9999 !important;
+  overflow:hidden;box-shadow:0 16px 48px #000;
+  flex-direction:column;opacity:1 !important;
+}
+.rail-add-menu.open{display:flex}
+.rail-menu-opt{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;
+  font-family:var(--sans);font-weight:600;font-size:14px;color:var(--text);
+  cursor:pointer;transition:background .1s;border:none;background:none;
+  width:100%;text-align:left;
+}
+.rail-menu-opt:active,.rail-menu-opt:hover{background:var(--surface3)}
+.rail-menu-opt span{font-size:14px}
 .items-list{flex:1;overflow-y:auto;padding:8px;-webkit-overflow-scrolling:touch}
 .items-list::-webkit-scrollbar{width:3px}
 .items-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -119,7 +133,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .item-card.selected::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:3px 0 0 3px}
 .item-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
 .item-title{font-weight:600;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-.item-type-badge{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:2px 7px;border-radius:3px;flex-shrink:0}
+.item-type-badge{font-family:var(--mono);font-size:10px;letter-spacing:.5px;padding:3px 8px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .badge-pw{background:var(--accent-bg);color:var(--accent-dim);border:1px solid var(--accent-dim)}
 .badge-note{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-dim)}
 .item-sub{font-family:var(--mono);font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -355,8 +369,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     flex:1; width:auto; min-width:0; border-right:none;
     display:flex !important;
   }
-  .items-toolbar { gap:6px; padding:8px }
-  .add-pw-btn, .add-note-btn { font-size:12px; padding:9px 6px }
+  /* toolbar removed — add buttons in nav rail */
 
   /* Preview pane: fixed full-screen overlay, slides from right */
   .preview-pane {
@@ -513,34 +526,44 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="app-body">
     <!-- Nav rail / sidebar -->
     <nav class="sidebar">
+
+      <!-- FILTER section -->
       <div class="sb-section">
-        <div class="sb-label">NAV</div>
-        <button class="sb-btn active" id="filter-all" onclick="setFilter('all')" title="All Items">◈<span class="sb-count" id="count-all">0</span></button>
-        <button class="sb-btn" id="filter-passwords" onclick="setFilter('password')" title="Passwords">🔑<span class="sb-count" id="count-passwords">0</span></button>
-        <button class="sb-btn" id="filter-notes" onclick="setFilter('note')" title="Secure Notes">📋<span class="sb-count" id="count-notes">0</span></button>
+        <div class="sb-label">VIEW</div>
+        <button class="sb-btn active" id="filter-all"       onclick="setFilter('all')"      title="All Items">◈<span class="sb-count" id="count-all">0</span></button>
+        <button class="sb-btn"        id="filter-passwords"  onclick="setFilter('password')" title="Passwords">🔑<span class="sb-count" id="count-passwords">0</span></button>
+        <button class="sb-btn"        id="filter-notes"      onclick="setFilter('note')"     title="Secure Notes">📋<span class="sb-count" id="count-notes">0</span></button>
+        <button class="sb-btn"        id="filter-cards"      onclick="setFilter('card')"     title="Cards">💳<span class="sb-count" id="count-cards">0</span></button>
+        <button class="sb-btn"        id="filter-identities" onclick="setFilter('identity')" title="Identities">🪪<span class="sb-count" id="count-identities">0</span></button>
+        <button class="sb-btn"        id="filter-documents"  onclick="setFilter('document')" title="Documents">📄<span class="sb-count" id="count-documents">0</span></button>
       </div>
+
       <div class="sb-divider"></div>
+
+      <!-- Single + button with pop-up menu -->
+      <div class="sb-section" style="position:relative">
+        <button class="sb-btn sb-add-btn" id="rail-add-btn" onclick="toggleRailMenu(event)" title="Add Item">＋</button>
+      </div>
+
+      <div class="sb-divider"></div>
+
+      <!-- FOLDERS section -->
       <div class="sb-section">
         <div class="sb-folder-header">
           <span class="sb-folder-label">FOLDERS</span>
         </div>
-        <!-- On mobile: single icon opens drawer. On desktop: full list shows inline -->
         <button class="sb-btn" id="folder-drawer-btn" onclick="openFolderDrawer()" title="Folders" style="position:relative">
           📁<span class="sb-folder-badge" id="folder-active-dot" style="display:none;position:absolute;top:8px;right:10px;width:7px;height:7px;background:var(--accent);border-radius:50%"></span>
         </button>
-        <!-- Desktop: inline folder list (hidden on mobile) -->
         <div id="folder-list-desktop" class="folder-list-desktop"></div>
       </div>
+
     </nav>
 
-    <!-- Items column -->
+    <!-- Items column (no toolbar — add buttons are in nav rail) -->
     <div class="items-col">
-      <div class="items-toolbar">
-        <button class="add-pw-btn" onclick="openAddPane('password')">+ Password</button>
-        <button class="add-note-btn" onclick="openAddPane('note')">+ Note</button>
-      </div>
       <div class="items-list" id="items-list">
-        <div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">NO ENTRIES YET</div></div>
+        <div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">NO ENTRIES YET<br>USE THE LEFT RAIL TO ADD</div></div>
       </div>
     </div>
 
@@ -646,8 +669,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           <span style="font-size:20px">⏻</span>
         </div>
       </div>
-      <!-- Backup path -->
-      <div>
+      <!-- Backup / Sync section — adapts to platform -->
+      <div id="backup-section-desktop" style="display:none">
         <div class="settings-section-title">CLOUD BACKUP</div>
         <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
           <div class="setting-row-label"><span>Save Location</span><span>Auto-saves here after every change</span></div>
@@ -660,6 +683,28 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
           <div class="guide-row"><div class="guide-header" onclick="toggleGuide('g-icloud')"><span>☁ iCloud Drive (Windows)</span><span class="guide-toggle" id="g-icloud-t">▶</span></div><div class="guide-body" id="g-icloud">1. Install iCloud for Windows from Microsoft Store<br>2. Sign in with Apple ID, enable iCloud Drive<br>3. Click Change above, navigate to iCloud Drive\<br>4. Create a Vault subfolder, save there<br>5. Auto-syncs to iPhone &amp; Mac</div></div>
           <div class="guide-row"><div class="guide-header" onclick="toggleGuide('g-proton')"><span>🔒 Proton Drive</span><span class="guide-toggle" id="g-proton-t">▶</span></div><div class="guide-body" id="g-proton">1. Download Proton Drive from proton.me/drive<br>2. Default path: C:\Users\[You]\Proton Drive\<br>3. Create a Vault\ subfolder<br>4. Click Change above and select it<br>5. End-to-end encrypted sync</div></div>
+        </div>
+      </div>
+      <div id="backup-section-ios" style="display:none">
+        <div class="settings-section-title">SYNC WITH WINDOWS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <div class="setting-row-label"><span>How to sync your vault</span><span>iPhone ↔ Windows via iCloud Drive</span></div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:2;padding:2px 0">
+              <b style="color:var(--accent)">Windows → iPhone</b><br>
+              1. Save on Windows (auto-writes to iCloud Drive)<br>
+              2. Here in Settings → tap <b style="color:var(--text)">Save Backup</b> to get latest<br>
+              3. Or tap <b style="color:var(--text)">Import Vault Backup</b> → pick file from iCloud Drive<br><br>
+              <b style="color:var(--accent)">iPhone → Windows</b><br>
+              1. Tap <b style="color:var(--text)">Save Backup</b> below → file downloads<br>
+              2. In Files app, move it to iCloud Drive → Vault folder<br>
+              3. Windows picks it up automatically
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-row-label"><span>Save Backup Now</span><span>Downloads encrypted .vault file</span></div>
+            <button class="btn-confirm" onclick="saveVaultFile(false);closeSettings()" style="padding:10px 16px;white-space:nowrap">SAVE</button>
+          </div>
         </div>
       </div>
       <!-- Encryption info -->
@@ -887,7 +932,16 @@ function showApp() {
   document.getElementById('view-mode').style.display = 'none';
   updateCounts(); renderFolders(); renderItems();
   resetAutoLockTimer();
-  if (IS_ELECTRON) initSavePath(); else { try { updateSaveBanner(); } catch(e){} }
+  if (IS_ELECTRON) {
+    initSavePath();
+    document.getElementById('backup-section-desktop').style.display = 'block';
+  } else {
+    try { updateSaveBanner(); } catch(e){}
+    // Show iOS sync guide, hide Windows backup path UI
+    const isMobileDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    document.getElementById('backup-section-ios').style.display = isMobileDevice ? 'block' : 'none';
+    document.getElementById('backup-section-desktop').style.display = isMobileDevice ? 'none' : 'block';
+  }
   document.getElementById('unlock-pw').value = '';
   document.getElementById('import-pw').value = '';
 }
@@ -935,9 +989,12 @@ async function autoSave() {
 //  RENDER — SIDEBAR COUNTS
 // ═══════════════════════════════════════════
 function updateCounts() {
-  document.getElementById('count-all').textContent       = entries.length;
-  document.getElementById('count-passwords').textContent = entries.filter(e=>e.type==='password').length;
-  document.getElementById('count-notes').textContent     = entries.filter(e=>e.type==='note').length;
+  document.getElementById('count-all').textContent        = entries.length;
+  document.getElementById('count-passwords').textContent  = entries.filter(e=>e.type==='password').length;
+  document.getElementById('count-notes').textContent      = entries.filter(e=>e.type==='note').length;
+  document.getElementById('count-cards').textContent      = entries.filter(e=>e.type==='card').length;
+  document.getElementById('count-identities').textContent = entries.filter(e=>e.type==='identity').length;
+  document.getElementById('count-documents').textContent  = entries.filter(e=>e.type==='document').length;
 }
 
 // ═══════════════════════════════════════════
@@ -977,6 +1034,19 @@ function renderFolders() {
 // ═══════════════════════════════════════════
 //  RENDER — ITEMS LIST
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  TYPE METADATA HELPERS
+// ═══════════════════════════════════════════
+function typeIcon(type) {
+  return {password:'🔑', note:'📋', card:'💳', identity:'🪪', document:'📄'}[type] || '◈';
+}
+function typeLabel(type) {
+  return {password:'Password', note:'Note', card:'Card', identity:'Identity', document:'Document'}[type] || type;
+}
+function typeBadgeClass(type) {
+  return {password:'badge-pw', note:'badge-note', card:'badge-card', identity:'badge-identity', document:'badge-document'}[type] || 'badge-pw';
+}
+
 function renderItems() {
   const query = document.getElementById('search-input').value.toLowerCase();
   const list  = document.getElementById('items-list');
@@ -995,8 +1065,16 @@ function renderItems() {
     return;
   }
   list.innerHTML = filtered.map(e => {
-    const isPw   = e.type==='password';
-    const sub    = isPw ? (e.username||e.url||'No username') : (e.note?(e.note.substring(0,50)+(e.note.length>50?'…':'')):'No content');
+    const sub = (() => {
+      switch(e.type) {
+        case 'password': return e.username||e.url||'No username';
+        case 'note':     return e.note ? e.note.substring(0,60)+(e.note.length>60?'…':'') : 'No content';
+        case 'card':     return e.cardNumber ? '•••• '+e.cardNumber.slice(-4) : (e.cardHolder||'No card number');
+        case 'identity': return [e.firstName, e.lastName].filter(Boolean).join(' ')||e.email||'No details';
+        case 'document': return e.note ? e.note.substring(0,60)+(e.note.length>60?'…':'') : 'No description';
+        default:         return '';
+      }
+    })();
     const folder = e.folder ? folders.find(f=>f.id===e.folder) : null;
     const tags   = [
       folder ? `<span class="item-tag item-folder-tag">📁 ${escHtml(folder.name)}</span>` : '',
@@ -1006,7 +1084,7 @@ function renderItems() {
     return `<div class="item-card${selectedId===e.id?' selected':''}" onclick="selectItem('${e.id}')">
       <div class="item-card-top">
         <span class="item-title">${escHtml(e.title)}</span>
-        <span class="item-type-badge ${isPw?'badge-pw':'badge-note'}">${isPw?'Password':'Note'}</span>
+        <span class="item-type-badge ${typeBadgeClass(e.type)}">${typeIcon(e.type)} ${typeLabel(e.type)}</span>
       </div>
       <div class="item-sub">${escHtml(sub)}</div>
       ${tags ? `<div class="item-meta">${tags}</div>` : ''}
@@ -1024,14 +1102,22 @@ function escHtml(s) {
 // ═══════════════════════════════════════════
 function setFilter(filter) {
   currentFilter=filter; currentFolder=null;
-  ['all','passwords','notes'].forEach(id=>document.getElementById('filter-'+id).classList.remove('active'));
-  document.getElementById('filter-'+({all:'all',password:'passwords',note:'notes'}[filter]||'all')).classList.add('active');
+  ['all','passwords','notes','cards','identities','documents'].forEach(id=>{
+    const el = document.getElementById('filter-'+id);
+    if (el) el.classList.remove('active');
+  });
+  const filterMap = {all:'all',password:'passwords',note:'notes',card:'cards',identity:'identities',document:'documents'};
+  const el = document.getElementById('filter-'+(filterMap[filter]||'all'));
+  if (el) el.classList.add('active');
   document.querySelectorAll('.sb-folder-btn').forEach(b=>b.classList.remove('active'));
   renderItems();
 }
 function setFolderFilter(id) {
   currentFolder=id; currentFilter='all';
-  ['all','passwords','notes'].forEach(f=>document.getElementById('filter-'+f).classList.remove('active'));
+  ['all','passwords','notes','cards','identities','documents'].forEach(f=>{
+    const el = document.getElementById('filter-'+f);
+    if (el) el.classList.remove('active');
+  });
   document.querySelectorAll('.sb-folder-btn').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
   renderItems();
 }
@@ -1052,22 +1138,52 @@ function showViewMode(id) {
   document.getElementById('view-mode').style.display='flex';
   document.getElementById('edit-mode').style.display='none';
 
-  const isPw = entry.type==='password';
-  document.getElementById('pv-icon').textContent  = isPw?'🔑':'📋';
+  document.getElementById('pv-icon').textContent  = typeIcon(entry.type);
   document.getElementById('pv-title').textContent = entry.title||'Untitled';
 
-  let html = `<div class="pv-grid${isPw?'':' full'}">`;
+  let html = '';
 
-  if (isPw) {
+  if (entry.type === 'password') {
+    html += `<div class="pv-grid">`;
     html += pvField('USERNAME / EMAIL', entry.username||'—', 'username', false, false, id);
     html += pvField('PASSWORD', entry.password||'—', 'password', true, false, id);
     html += '</div>';
     if (entry.url) html += `<div class="pv-grid" style="margin-top:16px">${pvField('URL', entry.url, 'url', false, true, id)}</div>`;
-  } else {
-    html += `<div class="pv-field" style="grid-column:1/-1">
+    if (entry.note) html += `<div style="margin-top:16px"><div class="pv-label" style="margin-bottom:6px">NOTES</div><div class="pv-note-value">${escHtml(entry.note)}</div></div>`;
+  } else if (entry.type === 'note') {
+    html += `<div class="pv-grid full"><div class="pv-field" style="grid-column:1/-1">
       <div class="pv-label">SECURE NOTE</div>
       <div class="pv-note-value" onclick="copyDirect('${id}','note')" title="Click to copy">${escHtml(entry.note||'—')}<span class="pv-copy-hint" style="display:block;margin-top:6px;font-size:10px;color:var(--accent-dim);opacity:.7">⎘ CLICK TO COPY</span></div>
     </div></div>`;
+  } else if (entry.type === 'card') {
+    html += `<div class="pv-grid">`;
+    html += pvField('CARD NUMBER', entry.cardNumber ? entry.cardNumber.replace(/(.{4})/g,'$1 ').trim() : '—', 'cardNumber', true, false, id);
+    html += pvField('CARDHOLDER NAME', entry.cardHolder||'—', 'cardHolder', false, false, id);
+    html += pvField('EXPIRY', entry.cardExpiry||'—', 'cardExpiry', false, false, id);
+    html += pvField('CVV', entry.cardCvv||'—', 'cardCvv', true, false, id);
+    html += '</div>';
+    if (entry.cardPin) html += `<div class="pv-grid" style="margin-top:16px">${pvField('PIN', entry.cardPin, 'cardPin', true, false, id)}</div>`;
+    if (entry.note) html += `<div style="margin-top:16px"><div class="pv-label" style="margin-bottom:6px">NOTES</div><div class="pv-note-value">${escHtml(entry.note)}</div></div>`;
+  } else if (entry.type === 'identity') {
+    html += `<div class="pv-grid">`;
+    html += pvField('FIRST NAME', entry.firstName||'—', 'firstName', false, false, id);
+    html += pvField('LAST NAME', entry.lastName||'—', 'lastName', false, false, id);
+    html += pvField('EMAIL', entry.email||'—', 'email', false, false, id);
+    html += pvField('PHONE', entry.phone||'—', 'phone', false, false, id);
+    html += '</div>';
+    if (entry.address||entry.city||entry.country) {
+      html += `<div class="pv-grid" style="margin-top:16px">`;
+      if (entry.address) html += pvField('ADDRESS', entry.address, 'address', false, false, id);
+      if (entry.city)    html += pvField('CITY / STATE', entry.city, 'city', false, false, id);
+      if (entry.country) html += pvField('COUNTRY', entry.country, 'country', false, false, id);
+      html += '</div>';
+    }
+    if (entry.note) html += `<div style="margin-top:16px"><div class="pv-label" style="margin-bottom:6px">NOTES</div><div class="pv-note-value">${escHtml(entry.note)}</div></div>`;
+  } else if (entry.type === 'document') {
+    html += `<div class="pv-grid full"><div class="pv-field">`;
+    html += `<div class="pv-label">DESCRIPTION</div>`;
+    html += `<div class="pv-note-value" onclick="copyDirect('${id}','note')">${escHtml(entry.note||'—')}</div>`;
+    html += `</div></div>`;
   }
 
   // Tags, folder, attachments
@@ -1093,7 +1209,7 @@ function pvField(label, value, field, masked, isUrl, entryId) {
   const displayVal = (masked && !isEmpty) ? '●●●●●●●●●●●●' : escHtml(value);
   return `<div class="pv-field">
     <div class="pv-label">${label}</div>
-    <div class="pv-value${masked?' masked':''}" id="pv-${field}-field" onclick="${isEmpty?'':(`copyDirect('${entryId}','${field}'`)}" title="${isEmpty?'':'Click to copy'}" style="${isEmpty?'cursor:default':''}">
+    <div class="pv-value${masked?' masked':''}" id="pv-${field}-field" onclick="${isEmpty?'':('copyDirect(\''+entryId+'\',\''+field+'\')')}" title="${isEmpty?'':'Click to copy'}" style="${isEmpty?'cursor:default':''}">
       <span class="pv-value-text" id="pv-${field}-text">${displayVal}</span>
       ${masked && !isEmpty ? `<button class="pv-eye" onclick="event.stopPropagation();togglePvPw('${field}','${entryId}')" id="pv-${field}-eye">👁</button>` : ''}
       ${isUrl && !isEmpty ? `<a class="pv-url-link" href="${escHtml(value)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ OPEN</a>` : ''}
@@ -1123,9 +1239,37 @@ function togglePvPw(field, entryId) {
 function copyDirect(entryId, field) {
   const entry = entries.find(e=>e.id===entryId);
   if (!entry || !entry[field]) return;
-  navigator.clipboard.writeText(entry[field]).then(()=>{
-    showToast({username:'Username',password:'Password',note:'Note',url:'URL'}[field]+' copied');
-  }).catch(()=>showToast('Clipboard access denied'));
+  const text = entry[field];
+  const label = {username:'Username',password:'Password',note:'Note',url:'URL',
+    cardNumber:'Card number',cardHolder:'Cardholder',cardExpiry:'Expiry',cardCvv:'CVV',cardPin:'PIN',
+    firstName:'First name',lastName:'Last name',email:'Email',phone:'Phone',
+    address:'Address',city:'City',country:'Country'}[field] || field;
+  // Try modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast(label + ' copied'))
+      .catch(() => fallbackCopy(text, label));
+  } else {
+    fallbackCopy(text, label);
+  }
+}
+function fallbackCopy(text, label) {
+  // iOS Safari fallback: create a temporary input, select it, copy
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+  document.body.appendChild(el);
+  el.focus();
+  el.select();
+  // For iOS
+  el.setSelectionRange(0, el.value.length);
+  try {
+    const ok = document.execCommand('copy');
+    showToast(ok ? label + ' copied' : 'Copy failed — tap and hold to copy');
+  } catch(e) {
+    showToast('Copy failed — tap and hold to copy');
+  }
+  document.body.removeChild(el);
 }
 
 // ═══════════════════════════════════════════
@@ -1138,7 +1282,8 @@ function openAddPane(type) {
   selectedId = null;
   renderItems();
   const em = document.getElementById('edit-mode');
-  document.getElementById('edit-pane-title').textContent = type==='password' ? 'ADD PASSWORD' : 'ADD SECURE NOTE';
+  const titles = {password:'ADD PASSWORD',note:'ADD SECURE NOTE',card:'ADD CREDIT CARD',identity:'ADD IDENTITY',document:'ADD DOCUMENT'};
+  document.getElementById('edit-pane-title').textContent = titles[type]||'ADD ENTRY';
   renderEditForm(null, type);
   if (isMobile()) {
     em.style.display = 'flex';
@@ -1158,7 +1303,8 @@ function openEditPane() {
   editingId = selectedId;
   currentType = entry.type;
   pendingAttachments = JSON.parse(JSON.stringify(entry.attachments||[]));
-  document.getElementById('edit-pane-title').textContent = entry.type==='password' ? 'EDIT PASSWORD' : 'EDIT SECURE NOTE';
+  const editTitles = {password:'EDIT PASSWORD',note:'EDIT SECURE NOTE',card:'EDIT CREDIT CARD',identity:'EDIT IDENTITY',document:'EDIT DOCUMENT'};
+  document.getElementById('edit-pane-title').textContent = editTitles[entry.type]||'EDIT ENTRY';
   renderEditForm(entry, entry.type);
   const em = document.getElementById('edit-mode');
   if (isMobile()) {
@@ -1255,13 +1401,62 @@ function renderEditForm(entry, type) {
       </div>
       <div class="form-group"><div class="form-label">NOTES (OPTIONAL)</div><textarea class="form-textarea" id="edit-note" placeholder="Any additional notes...">${escHtml(entry?.note||'')}</textarea></div>
       ${attachSection}`;
-  } else {
+  } else if (type==='note') {
     body.innerHTML = `
       <div class="form-group"><div class="form-label">TITLE</div><input class="form-input" type="text" id="edit-title" placeholder="e.g. SSH Key, Recovery Codes..." value="${escHtml(entry?.title||'')}"></div>
       <div class="form-group"><div class="form-label">SECURE NOTE</div><textarea class="form-textarea" id="edit-note" style="min-height:180px" placeholder="Store anything sensitive here — keys, PINs, recovery codes...">${escHtml(entry?.note||'')}</textarea></div>
       <div class="form-grid">
         <div class="form-group"><div class="form-label">FOLDER</div><select class="form-select" id="edit-folder"><option value="">— No folder —</option>${folderOptions}</select></div>
         <div class="form-group"><div class="form-label">TAGS (comma separated)</div><input class="form-input" type="text" id="edit-tags" placeholder="work, personal..." value="${escHtml((entry?.tags||[]).join(', '))}"></div>
+      </div>
+      ${attachSection}`;
+  } else if (type==='card') {
+    body.innerHTML = `
+      <div class="form-group"><div class="form-label">CARD NICKNAME / BANK</div><input class="form-input" type="text" id="edit-title" placeholder="e.g. Chase Sapphire, Amex Gold..." value="${escHtml(entry?.title||'')}"></div>
+      <div class="form-group"><div class="form-label">CARD NUMBER</div><input class="form-input" type="text" id="edit-cardNumber" placeholder="1234 5678 9012 3456" value="${escHtml(entry?.cardNumber||'')}" autocomplete="off" maxlength="19" oninput="this.value=this.value.replace(/[^0-9 ]/g,'')"></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">CARDHOLDER NAME</div><input class="form-input" type="text" id="edit-cardHolder" placeholder="Name on card" value="${escHtml(entry?.cardHolder||'')}"></div>
+        <div class="form-group"><div class="form-label">EXPIRY (MM/YY)</div><input class="form-input" type="text" id="edit-cardExpiry" placeholder="MM/YY" value="${escHtml(entry?.cardExpiry||'')}" maxlength="5"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">CVV</div><div class="pw-wrap"><input class="form-input" type="password" id="edit-cardCvv" placeholder="•••" value="${escHtml(entry?.cardCvv||'')}" autocomplete="off" maxlength="4"><button class="pw-eye" onclick="togglePwVis('edit-cardCvv',this)">👁</button></div></div>
+        <div class="form-group"><div class="form-label">PIN (OPTIONAL)</div><div class="pw-wrap"><input class="form-input" type="password" id="edit-cardPin" placeholder="••••" value="${escHtml(entry?.cardPin||'')}" autocomplete="off" maxlength="8"><button class="pw-eye" onclick="togglePwVis('edit-cardPin',this)">👁</button></div></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">FOLDER</div><select class="form-select" id="edit-folder"><option value="">— No folder —</option>${folderOptions}</select></div>
+        <div class="form-group"><div class="form-label">TAGS</div><input class="form-input" type="text" id="edit-tags" placeholder="work, personal..." value="${escHtml((entry?.tags||[]).join(', '))}"></div>
+      </div>
+      <div class="form-group"><div class="form-label">NOTES (OPTIONAL)</div><textarea class="form-textarea" id="edit-note" placeholder="Any additional notes...">${escHtml(entry?.note||'')}</textarea></div>
+      ${attachSection}`;
+  } else if (type==='identity') {
+    body.innerHTML = `
+      <div class="form-group"><div class="form-label">LABEL / NICKNAME</div><input class="form-input" type="text" id="edit-title" placeholder="e.g. Personal, Work Contact..." value="${escHtml(entry?.title||'')}"></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">FIRST NAME</div><input class="form-input" type="text" id="edit-firstName" placeholder="First name" value="${escHtml(entry?.firstName||'')}"></div>
+        <div class="form-group"><div class="form-label">LAST NAME</div><input class="form-input" type="text" id="edit-lastName" placeholder="Last name" value="${escHtml(entry?.lastName||'')}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">EMAIL</div><input class="form-input" type="email" id="edit-email" placeholder="email@example.com" value="${escHtml(entry?.email||'')}"></div>
+        <div class="form-group"><div class="form-label">PHONE</div><input class="form-input" type="tel" id="edit-phone" placeholder="+1 555 000 0000" value="${escHtml(entry?.phone||'')}"></div>
+      </div>
+      <div class="form-group"><div class="form-label">ADDRESS</div><input class="form-input" type="text" id="edit-address" placeholder="Street address" value="${escHtml(entry?.address||'')}"></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">CITY / STATE</div><input class="form-input" type="text" id="edit-city" placeholder="City, State" value="${escHtml(entry?.city||'')}"></div>
+        <div class="form-group"><div class="form-label">COUNTRY</div><input class="form-input" type="text" id="edit-country" placeholder="Country" value="${escHtml(entry?.country||'')}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">FOLDER</div><select class="form-select" id="edit-folder"><option value="">— No folder —</option>${folderOptions}</select></div>
+        <div class="form-group"><div class="form-label">TAGS</div><input class="form-input" type="text" id="edit-tags" placeholder="work, personal..." value="${escHtml((entry?.tags||[]).join(', '))}"></div>
+      </div>
+      <div class="form-group"><div class="form-label">NOTES (OPTIONAL)</div><textarea class="form-textarea" id="edit-note" placeholder="Any additional notes...">${escHtml(entry?.note||'')}</textarea></div>
+      ${attachSection}`;
+  } else if (type==='document') {
+    body.innerHTML = `
+      <div class="form-group"><div class="form-label">DOCUMENT NAME</div><input class="form-input" type="text" id="edit-title" placeholder="e.g. Passport, Insurance Card, Certificate..." value="${escHtml(entry?.title||'')}"></div>
+      <div class="form-group"><div class="form-label">DESCRIPTION / NOTES</div><textarea class="form-textarea" id="edit-note" style="min-height:120px" placeholder="Document details, numbers, expiry dates...">${escHtml(entry?.note||'')}</textarea></div>
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">FOLDER</div><select class="form-select" id="edit-folder"><option value="">— No folder —</option>${folderOptions}</select></div>
+        <div class="form-group"><div class="form-label">TAGS</div><input class="form-input" type="text" id="edit-tags" placeholder="work, personal..." value="${escHtml((entry?.tags||[]).join(', '))}"></div>
       </div>
       ${attachSection}`;
   }
@@ -1275,12 +1470,28 @@ async function saveEntry() {
     const tags   = (document.getElementById('edit-tags')?.value||'').split(',').map(t=>t.trim()).filter(Boolean);
     const folder = document.getElementById('edit-folder')?.value||'';
     const note   = document.getElementById('edit-note')?.value||'';
-    const data   = {
+    const g = id => document.getElementById(id)?.value||'';
+    const data = {
       type:        currentType,
       title,
-      username:    document.getElementById('edit-username')?.value||'',
-      password:    document.getElementById('edit-password')?.value||'',
-      url:         document.getElementById('edit-url')?.value||'',
+      // Password fields
+      username:    g('edit-username'),
+      password:    g('edit-password'),
+      url:         g('edit-url'),
+      // Card fields
+      cardNumber:  g('edit-cardNumber'),
+      cardHolder:  g('edit-cardHolder'),
+      cardExpiry:  g('edit-cardExpiry'),
+      cardCvv:     g('edit-cardCvv'),
+      cardPin:     g('edit-cardPin'),
+      // Identity fields
+      firstName:   g('edit-firstName'),
+      lastName:    g('edit-lastName'),
+      email:       g('edit-email'),
+      phone:       g('edit-phone'),
+      address:     g('edit-address'),
+      city:        g('edit-city'),
+      country:     g('edit-country'),
       note,
       tags,
       folder,
@@ -1781,6 +1992,53 @@ function closeMobilePreview() {
 // ═══════════════════════════════════════════
 //  KEYBOARD SHORTCUTS (desktop only)
 // ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+//  RAIL ADD MENU
+// ═══════════════════════════════════════════
+let _railMenuJustOpened = false;
+
+function toggleRailMenu(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const menu = document.getElementById('rail-add-menu');
+  const btn  = document.getElementById('rail-add-btn');
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) {
+    closeRailMenu();
+    return;
+  }
+  // Position menu next to the + button
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = Math.min(rect.top, window.innerHeight - 290) + 'px';
+  menu.classList.add('open');
+  _railMenuJustOpened = true;
+  setTimeout(() => { _railMenuJustOpened = false; }, 300);
+}
+function closeRailMenu() {
+  document.getElementById('rail-add-menu')?.classList.remove('open');
+}
+function railMenuSelect(type) {
+  // Use setTimeout so menu close doesn't race with openAddPane
+  setTimeout(() => {
+    closeRailMenu();
+    openAddPane(type);
+  }, 10);
+}
+// Close when tapping outside — but not immediately after opening
+document.addEventListener('touchend', (e) => {
+  if (_railMenuJustOpened) return;
+  const menu = document.getElementById('rail-add-menu');
+  const btn  = document.getElementById('rail-add-btn');
+  if (!menu?.contains(e.target) && !btn?.contains(e.target)) closeRailMenu();
+}, {passive:true});
+document.addEventListener('click', (e) => {
+  if (_railMenuJustOpened) return;
+  const menu = document.getElementById('rail-add-menu');
+  const btn  = document.getElementById('rail-add-btn');
+  if (!menu?.contains(e.target) && !btn?.contains(e.target)) closeRailMenu();
+});
+
 // keyboard shortcuts handled above
 
 document.getElementById('settings-modal').addEventListener('click', function(e) { if (e.target===this) closeSettings(); });
@@ -1796,5 +2054,13 @@ window.addEventListener('load', () => {
   autoLockMins = parseInt(localStorage.getItem(AUTOLOCK_KEY)||'0')||0;
 });
 </script>
+<!-- Rail add menu — at body level to avoid overflow/transform clipping -->
+<div class="rail-add-menu" id="rail-add-menu">
+  <button class="rail-menu-opt" ontouchstart="railMenuSelect('password')" onclick="railMenuSelect('password')">🔑 <span>Password</span></button>
+  <button class="rail-menu-opt" ontouchstart="railMenuSelect('note')"     onclick="railMenuSelect('note')">📋 <span>Secure Note</span></button>
+  <button class="rail-menu-opt" ontouchstart="railMenuSelect('card')"     onclick="railMenuSelect('card')">💳 <span>Credit Card</span></button>
+  <button class="rail-menu-opt" ontouchstart="railMenuSelect('identity')" onclick="railMenuSelect('identity')">🪪 <span>Identity</span></button>
+  <button class="rail-menu-opt" ontouchstart="railMenuSelect('document')" onclick="railMenuSelect('document')">📄 <span>Document</span></button>
+</div>
 </body>
 </html>
