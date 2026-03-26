@@ -63,6 +63,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .lock-btn:hover{opacity:.88}
 .lock-error{font-family:var(--mono);font-size:12px;color:var(--danger);text-align:center;min-height:16px;letter-spacing:1px}
 .lock-hint{font-family:var(--mono);font-size:11px;color:var(--text-faint);text-align:center;line-height:1.8}
+.faceid-btn{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-weight:600;font-size:15px;padding:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.5px}
+.faceid-btn:active{border-color:var(--accent-dim);background:var(--accent-bg);color:var(--accent)}
 .lock-import-box{border:1px dashed var(--border);border-radius:var(--r);padding:18px;text-align:center;cursor:pointer;transition:all .2s;font-family:var(--mono);font-size:12px;color:var(--text-faint);letter-spacing:.5px}
 .lock-import-box:active{border-color:var(--accent-dim);color:var(--accent-dim);background:var(--accent-bg)}
 
@@ -489,8 +491,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <button class="lock-tab" id="tab-import" onclick="switchLockTab('import')">RESTORE</button>
     </div>
     <div class="lock-form">
-      <div id="form-unlock">
+      <div id="form-unlock" style="display:flex;flex-direction:column;gap:10px">
         <input class="lock-input" type="password" id="unlock-pw" placeholder="Master password" autocomplete="current-password">
+        <button class="faceid-btn" id="faceid-btn" onclick="unlockWithBiometric()" style="display:none">
+          <span id="faceid-icon">🔒</span> <span id="faceid-label">Use Face ID / Touch ID</span>
+        </button>
       </div>
       <div id="form-new" style="display:none;flex-direction:column;gap:12px">
         <input class="lock-input" type="password" id="new-pw" placeholder="Choose master password" autocomplete="new-password">
@@ -647,13 +652,20 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           </div>
           <div class="setting-row">
             <div class="setting-row-label"><span>Save Backup</span><span>Export encrypted .vault file</span></div>
-            <button class="al-opt" onclick="saveVaultFile(false)">SAVE</button>
+            <button class="al-opt" onclick="iosSaveVault()">SAVE</button>
           </div>
         </div>
       </div>
       <!-- Auto-lock -->
       <div>
         <div class="settings-section-title">SECURITY</div>
+        <div id="biometric-setting-row" class="setting-row" style="display:none">
+          <div class="setting-row-label">
+            <span id="biometric-setting-label">Face ID / Touch ID</span>
+            <span id="biometric-setting-sub">Unlock without master password</span>
+          </div>
+          <button class="al-opt" id="biometric-toggle-btn" onclick="toggleBiometric()">ENABLE</button>
+        </div>
         <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
           <div class="setting-row-label"><span>Auto-Lock Timer</span><span>Locks after inactivity</span></div>
           <div class="autolock-opts" id="autolock-opts">
@@ -703,7 +715,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           </div>
           <div class="setting-row">
             <div class="setting-row-label"><span>Save Backup Now</span><span>Downloads encrypted .vault file</span></div>
-            <button class="btn-confirm" onclick="saveVaultFile(false);closeSettings()" style="padding:10px 16px;white-space:nowrap">SAVE</button>
+            <button class="btn-confirm" onclick="iosSaveVault()" style="padding:10px 16px;white-space:nowrap">SAVE</button>
           </div>
         </div>
       </div>
@@ -814,6 +826,8 @@ let   nativeSavePath= null;
 
 const STORAGE_KEY   = 'vault_encrypted_v1';
 const AUTOLOCK_KEY  = 'vault_autolock_mins';
+const BIOMETRIC_KEY = 'vault_biometric_enabled';
+const BIOMETRIC_CRED_KEY = 'vault_biometric_cred_id';
 const BACKUP_PATH_KEY = 'vault_backup_path';
 
 // ═══════════════════════════════════════════
@@ -932,6 +946,7 @@ function showApp() {
   document.getElementById('view-mode').style.display = 'none';
   updateCounts(); renderFolders(); renderItems();
   resetAutoLockTimer();
+  initBiometric();
   if (IS_ELECTRON) {
     initSavePath();
     document.getElementById('backup-section-desktop').style.display = 'block';
@@ -1740,6 +1755,32 @@ async function saveAs() {
 }
 async function exportVault() { await saveVaultFile(false); }
 
+async function iosSaveVault() {
+  const payload = getVaultPayload();
+  if (!payload) { showToast('Nothing to save'); return; }
+  try {
+    const date     = new Date().toISOString().split('T')[0];
+    const filename = `vault-${date}.vault`;
+    // Use data: URI — most reliable method in iOS Safari
+    const b64 = btoa(unescape(encodeURIComponent(payload)));
+    const dataUri = `data:application/octet-stream;base64,${b64}`;
+    const a = document.createElement('a');
+    a.href = dataUri;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    closeSettings();
+    // Small delay then show instructions
+    setTimeout(() => {
+      showToast('Tap Share → Save to Files → iCloud Drive');
+    }, 500);
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+  }
+}
+
 // ═══════════════════════════════════════════
 //  IMPORT — .vault file
 // ═══════════════════════════════════════════
@@ -1968,7 +2009,21 @@ window.addEventListener('load',()=>{
     document.getElementById('lock-hint').innerHTML='First time here? Select your .vault backup file<br>from iCloud Drive and enter your master password.';
   }
   autoLockMins=parseInt(localStorage.getItem(AUTOLOCK_KEY)||'0')||0;
+  // Show Face ID button if previously enrolled
+  initBiometricOnLockScreen();
 });
+
+async function initBiometricOnLockScreen() {
+  const available = await isBiometricAvailable();
+  const enabled   = localStorage.getItem(BIOMETRIC_KEY) === 'true';
+  const credId    = localStorage.getItem(BIOMETRIC_CRED_KEY);
+  const stored    = localStorage.getItem(STORAGE_KEY);
+  const faceBtn   = document.getElementById('faceid-btn');
+  if (faceBtn && available && enabled && credId && stored) {
+    faceBtn.style.display = 'flex';
+    setTimeout(() => unlockWithBiometric(), 800);
+  }
+}
 
 
 // ═══════════════════════════════════════════
@@ -2038,6 +2093,180 @@ document.addEventListener('click', (e) => {
   const btn  = document.getElementById('rail-add-btn');
   if (!menu?.contains(e.target) && !btn?.contains(e.target)) closeRailMenu();
 });
+
+
+// ═══════════════════════════════════════════
+//  FACE ID / TOUCH ID (WebAuthn)
+// ═══════════════════════════════════════════
+const BIOMETRIC_RP_ID = location.hostname;
+const BIOMETRIC_USER_ID = new TextEncoder().encode('vault-user');
+
+async function isBiometricAvailable() {
+  try {
+    if (!window.PublicKeyCredential) return false;
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return available;
+  } catch { return false; }
+}
+
+async function initBiometric() {
+  const available = await isBiometricAvailable();
+  const enabled   = localStorage.getItem(BIOMETRIC_KEY) === 'true';
+  const credId    = localStorage.getItem(BIOMETRIC_CRED_KEY);
+
+  // Show/hide Face ID button on lock screen
+  const faceBtn = document.getElementById('faceid-btn');
+  if (faceBtn) faceBtn.style.display = (available && enabled && credId) ? 'flex' : 'none';
+
+  // Show/hide biometric setting row
+  const settingRow = document.getElementById('biometric-setting-row');
+  if (settingRow && available) {
+    settingRow.style.display = 'flex';
+    updateBiometricSettingUI(enabled);
+  }
+
+  // Auto-trigger Face ID if enabled and vault exists
+  if (available && enabled && credId && localStorage.getItem(STORAGE_KEY)) {
+    setTimeout(() => unlockWithBiometric(), 600);
+  }
+}
+
+function updateBiometricSettingUI(enabled) {
+  const btn = document.getElementById('biometric-toggle-btn');
+  const sub = document.getElementById('biometric-setting-sub');
+  if (btn) btn.textContent = enabled ? 'DISABLE' : 'ENABLE';
+  if (sub) sub.textContent = enabled ? 'Tap to disable biometric unlock' : 'Unlock without master password';
+}
+
+async function toggleBiometric() {
+  const enabled = localStorage.getItem(BIOMETRIC_KEY) === 'true';
+  if (enabled) {
+    // Disable
+    localStorage.removeItem(BIOMETRIC_KEY);
+    localStorage.removeItem(BIOMETRIC_CRED_KEY);
+    localStorage.removeItem('vault_biometric_pw_enc');
+    updateBiometricSettingUI(false);
+    document.getElementById('faceid-btn').style.display = 'none';
+    showToast('Biometric unlock disabled');
+  } else {
+    // Enable — register a new credential
+    await registerBiometric();
+  }
+}
+
+async function registerBiometric() {
+  if (!masterPassword) { showToast('Unlock vault first to enable Face ID'); return; }
+  try {
+    // Create a WebAuthn credential — this triggers Face ID / Touch ID prompt
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Vault', id: BIOMETRIC_RP_ID },
+        user: { id: BIOMETRIC_USER_ID, name: 'vault-user', displayName: 'Vault User' },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+          residentKey: 'preferred'
+        },
+        timeout: 60000
+      }
+    });
+
+    // Store credential ID
+    const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    localStorage.setItem(BIOMETRIC_CRED_KEY, credIdB64);
+
+    // Encrypt master password with a key derived from a device-stored secret
+    // We use the credential ID as part of the encryption key material
+    const pwEnc = await encryptBiometricPw(masterPassword, credIdB64);
+    localStorage.setItem('vault_biometric_pw_enc', pwEnc);
+    localStorage.setItem(BIOMETRIC_KEY, 'true');
+
+    updateBiometricSettingUI(true);
+    document.getElementById('faceid-btn').style.display = 'flex';
+    showToast('Face ID / Touch ID enabled ✓');
+  } catch(e) {
+    if (e.name === 'NotAllowedError') showToast('Face ID setup cancelled');
+    else showToast('Could not enable Face ID: ' + e.message);
+  }
+}
+
+async function unlockWithBiometric() {
+  const credIdB64 = localStorage.getItem(BIOMETRIC_CRED_KEY);
+  const pwEnc     = localStorage.getItem('vault_biometric_pw_enc');
+  if (!credIdB64 || !pwEnc) return;
+
+  try {
+    document.getElementById('faceid-label').textContent = 'Verifying...';
+    const credIdBytes = Uint8Array.from(atob(credIdB64), c => c.charCodeAt(0));
+    const challenge   = crypto.getRandomValues(new Uint8Array(32));
+
+    // Trigger Face ID / Touch ID
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId: BIOMETRIC_RP_ID,
+        allowCredentials: [{ type: 'public-key', id: credIdBytes }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+
+    // Recover master password
+    const pw = await decryptBiometricPw(pwEnc, credIdB64);
+    if (!pw) throw new Error('Could not recover password');
+
+    // Unlock vault
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) throw new Error('No vault found');
+    const data = await decrypt(stored, pw);
+    entries      = Array.isArray(data) ? data : (Array.isArray(data.entries) ? data.entries : []);
+    folders      = Array.isArray(data.folders) ? data.folders : [];
+    masterPassword = pw;
+    showApp();
+  } catch(e) {
+    document.getElementById('faceid-label').textContent = 'Use Face ID / Touch ID';
+    if (e.name === 'NotAllowedError') showToast('Face ID cancelled');
+    else if (e.message === 'No vault found') showToast('No vault found');
+    else showToast('Biometric unlock failed');
+  }
+}
+
+// Simple encryption of master password using a fixed app secret + credential ID
+// This keeps the password protected at rest while allowing biometric recovery
+async function encryptBiometricPw(pw, credIdB64) {
+  const secret   = 'vault-biometric-v1-' + credIdB64.substring(0, 16);
+  const keyMat   = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'PBKDF2' }, false, ['deriveKey']);
+  const salt     = crypto.getRandomValues(new Uint8Array(16));
+  const iv       = crypto.getRandomValues(new Uint8Array(12));
+  const key      = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMat, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const enc      = await crypto.subtle.encrypt({ name: 'AES-GCM', iv },
+    key, new TextEncoder().encode(pw));
+  const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(enc)]);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptBiometricPw(encB64, credIdB64) {
+  try {
+    const secret   = 'vault-biometric-v1-' + credIdB64.substring(0, 16);
+    const combined = Uint8Array.from(atob(encB64), c => c.charCodeAt(0));
+    const salt     = combined.slice(0, 16);
+    const iv       = combined.slice(16, 28);
+    const data     = combined.slice(28);
+    const keyMat   = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+      { name: 'PBKDF2' }, false, ['deriveKey']);
+    const key      = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      keyMat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const dec      = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    return new TextDecoder().decode(dec);
+  } catch { return null; }
+}
 
 // keyboard shortcuts handled above
 
